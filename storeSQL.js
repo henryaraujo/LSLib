@@ -64,47 +64,53 @@
 
         }
 
-        this.select = function (key,data = null) {
+        this.select = function (key,data = '') {
             key = this.setPrefix(key)
             
             let _return = utils.unserialize(this.store.getItem(key));
-            if(data && utils.gettype(data) == '[object Array]'){
-              _return = generateSelect(_return,data);
+
+            if(data.length){
+
+                if(utils.gettype(_return) == '[object Array]'){
+                  _return = selectResult(_return,data);
+                }else if(utils.gettype(_return) == '[object Object]'){
+                  _return = createObject(_return,data);  
+                }
             }
+
             return _return;
-            
-            
-            //return utils.unserialize(this.store.getItem(key));
         }
 
-        this.update = function (key, data) { }
+        this.update = function (key, data){}
 
-        this.where = function (key, data) { 
-          console.log(key,data)
-        }
+        this.where = function (key, data){}
 
         this.remove = function (key) {
+            let self_key;
 
             if (utils.gettype(key) == '[object Array]') {
                 key.map(indice => this.setPrefix(indice))
-                    .forEach(k => this.store.removeItem(k))
+                    .forEach(_key => this.store.removeItem(_key))
             } else {
-                key = this.setPrefix(key);
+                self_key = this.setPrefix(key);
             }
 
-            this.store.removeItem(key);
+            this.store.removeItem(self_key);
         }
 
         this.clearAll = function () {
 
             this.list()
                 .map(indice => this.setPrefix(indice))
-                .forEach(k => this.store.removeItem(k))
+                .forEach(key => this.store.removeItem(key))
 
         }
 
         this.list = function () {
-            return Object.keys(this.store).map(key => key.replace(this.prefix, ''));
+            
+            return Object.keys(this.store)
+                         .filter(key => key.startsWith(this.prefix))
+                         .map(key => key.replace(this.prefix, ''));
         }
     }
 
@@ -112,22 +118,23 @@
         return !!sql.getItem(key)
     }
   
-    function generateSelect(result,data){
-      
-      return result.map(value => {
+    function selectResult(result,data){
 
-            var response = {};
-
-            for (let i = 0, size = data.length; i < size; i++)
-
-                response[data[i]] = value[data[i]];
-
-            return response;
-  
+      return result.map(input => {
+            return createObject(input,data);
        });
     }
 
+    function createObject(input,data){
 
+        let response = {};
+    
+        data.forEach((item,i) =>{
+            response[item] = input[item]
+        });
+
+        return response
+    }
 
     if (typeof define === 'function' && define.amd) {
         define(function () {
