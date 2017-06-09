@@ -81,7 +81,30 @@
             return _return;
         }
 
-        this.update = function (key, data){}
+        this.update = function (key, input){
+            
+            let originalKey = key;
+            key = this.setPrefix(key)
+            
+            let data = utils.unserialize(this.store.getItem(key));
+            
+            const objectUpdate = [];
+
+            let keysNotExists = Object.keys(input).filter(value => {
+                if(!Object.keys(data).includes(value)){
+                   return value
+                }else{
+                    objectUpdate.push(value)
+                }
+            });
+
+            let dataUpdate = createObject(input,objectUpdate);
+            this.insert(originalKey,dataUpdate);
+
+            if(keysNotExists.length){
+                console.log(`These fields don't exist: [${keysNotExists}] in ('${originalKey}')`)
+            }
+        }
 
         this.where = function (key, data){}
 
