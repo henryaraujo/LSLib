@@ -2,180 +2,176 @@
 
   let utils = {
 
-    serialize: (data) => {
-      return JSON.stringify(data);
-    },
+  serialize: (data) => {
+    return JSON.stringify(data);
+  },
 
-    unserialize: (data) => {
-      if (data == null) return undefined;
-      return JSON.parse(data);
-    },
+  unserialize: (data) => {
+    if (data == null) return undefined;
+    return JSON.parse(data);
+  },
 
-    gettype: (value) => {
-      return Object.prototype.toString.call(value)
-    },
-
-    isJSON: (value) => {
-      let regex = new RegExp(/^[\[|\{](\s|.*|\w)*[\]|\}]$/);
-      return regex.test(value)
+  gettype: (value) => {
+    return Object.prototype.toString.call(value)
     }
+
   };
 
-  let storeSQL = function (prefix, store) {
-  	this.prefix = prefix;
-  	this.store = store;
+  const storeSQL = function (prefix, store) {
+    this.prefix = prefix;
+    this.store = store;
 
-		this.setPrefix = (key) => {
-			return `${this.prefix}${key}`
-		}
-		
-		this._getItem = key => {
-			return this.store.getItem(
-				this.setPrefix(key),
-			)
-		}
+    this.setPrefix = (key) => {
+      return `${this.prefix}${key}`
+    }
 
-		this._setItem = (key, data) => {
-			return this.store.setItem(
-				this.setPrefix(key),
-				utils.serialize(data),
-			);
-		}
+    this._getItem = key => {
+      return this.store.getItem(
+        this.setPrefix(key),
+      )
+    }
 
-		this.create = (key, data) => {
+    this._setItem = (key, data) => {
+      return this.store.setItem(
+        this.setPrefix(key),
+        utils.serialize(data),
+      );
+    }
 
-			if (!exists(this.store, key)) {
-				this._setItem(
-					key,
-					data,
-				)
-			}
-			return this
-		}
+    this.create = (key, data) => {
 
-		this.insert = (key, data) => {
+      if (!exists(this.store, key)) {
+        this._setItem(
+          key,
+          data,
+        )
+      }
+      return this
+    }
 
-			let _data = utils.unserialize(this._getItem(key))
-			let value = null;
+    this.insert = (key, data) => {
 
-			if (utils.gettype(_data) == '[object Array]') {
-				value = _data.concat(data);
-			}
+      let _data = utils.unserialize(this._getItem(key))
+      let value = null;
 
-			if (utils.gettype(_data) == '[object Object]') {
-				value = Object.assign(_data, data)
-			}
+      if (utils.gettype(_data) == '[object Array]') {
+        value = _data.concat(data);
+      }
 
-			if (exists(this.store, key)) {
-				this._setItem(
-					key,
-					value,
-				)
-			}
+      if (utils.gettype(_data) == '[object Object]') {
+        value = Object.assign(_data, data)
+      }
 
-		}
+      if (exists(this.store, key)) {
+        this._setItem(
+          key,
+          value,
+        )
+      }
 
-		this.select = (key,data = '') => {
-			
-			let result = utils.unserialize(this._getItem(key));
+    }
 
-			if(data.length){
+    this.select = (key,data = '') => {
 
-				if(utils.gettype(result) == '[object Array]'){
-					result = selectResult(result,data);
-				}else if(utils.gettype(result) == '[object Object]'){
-					result = createObject(result,data);  
-				}
-			}
+      let result = utils.unserialize(this._getItem(key));
 
-			return result;
-		}
+      if(data.length){
 
-		this.update = (key, input) => {
-			
-			let originalKey = key;
-			
-			let data = utils.unserialize(this._getItem(key));
-			
-			const objectUpdate = [];
+        if(utils.gettype(result) == '[object Array]'){
+          result = selectResult(result,data);
+        }else if(utils.gettype(result) == '[object Object]'){
+          result = createObject(result,data);
+        }
+      }
 
-			let keysNotExists = Object.keys(input).filter(value => {
-				if(!Object.keys(data).includes(value)){
-					return value
-				}else{
-					objectUpdate.push(value)
-				}
-			});
+      return result;
+    }
 
-			let dataUpdate = createObject(input,objectUpdate);
-			this.insert(originalKey,dataUpdate);
+    this.update = (key, input) => {
 
-			if(keysNotExists.length){
-				console.log(`These fields don't exist: [${keysNotExists}] in ('${originalKey}')`)
-			}
-		}
+      let originalKey = key;
 
-		this.where = (key, data) => {}
+      let data = utils.unserialize(this._getItem(key));
 
-		this.remove = (key) => {
-			let self_key = null;
+      const objectUpdate = [];
 
-			if (utils.gettype(key) == '[object Array]') {
-				key.map(indice => this.setPrefix(indice))
-					.forEach(_key => this.store.removeItem(_key))
-			} else {
-				self_key = this.setPrefix(key);
-			}
+      let keysNotExists = Object.keys(input).filter(value => {
+        if(!Object.keys(data).includes(value)){
+          return value
+        }else{
+          objectUpdate.push(value)
+        }
+      });
 
-			this.store.removeItem(self_key);
-		}
+      let dataUpdate = createObject(input,objectUpdate);
+      this.insert(originalKey,dataUpdate);
 
-		this.clearAll = () => {
+      if(keysNotExists.length){
+        console.log(`These fields don't exist: [${keysNotExists}] in ('${originalKey}')`)
+      }
+    }
 
-			this.list()
-				.map(indice => this.setPrefix(indice))
-				.forEach(key => this.store.removeItem(key))
+    this.where = (key, data) => {}
 
-		}
+    this.remove = (key) => {
+      let self_key = null;
 
-		this.list = () => {
-			
-			return Object.keys(this.store)
-						.filter(key => key.startsWith(this.prefix))
-						.map(key => key.replace(this.prefix, ''));
-		}
-	}
+      if (utils.gettype(key) == '[object Array]') {
+        key.map(indice => this.setPrefix(indice))
+          .forEach(_key => this.store.removeItem(_key))
+      } else {
+        self_key = this.setPrefix(key);
+      }
 
-		const exists = (sql, key) => {
-			return !!sql.getItem(key)
-		}
+      this.store.removeItem(self_key);
+    }
 
-		const selectResult = (result,data) => {
+    this.clearAll = () => {
 
-		return result.map(input => {
-				return createObject(input,data);
-		});
-		}
+      this.list()
+        .map(indice => this.setPrefix(indice))
+        .forEach(key => this.store.removeItem(key))
 
-		const createObject = (input,data) => {
+    }
 
-			let response = {};
-		
-			data.forEach((item) =>{
-				response[item] = input[item]
-			});
+    this.list = () => {
 
-			return response
-		}
+      return Object.keys(this.store)
+            .filter(key => key.startsWith(this.prefix))
+            .map(key => key.replace(this.prefix, ''));
+    }
+  }
 
-		if (typeof define === 'function' && define.amd) {
-			define(function () {
-				return { storeSQL: storeSQL };
-			});
-		} else if (typeof exports !== 'undefined') {
-			module.exports = storeSQL;
-		} else {
-			window.storeSQL = storeSQL;
-		}
+    const exists = (sql, key) => {
+      return !!sql.getItem(key)
+    }
+
+    const selectResult = (result,data) => {
+
+    return result.map(input => {
+        return createObject(input,data);
+    });
+    }
+
+    const createObject = (input,data) => {
+
+      let response = {};
+
+      data.forEach((item) =>{
+        response[item] = input[item]
+      });
+
+      return response
+    }
+
+    if (typeof define === 'function' && define.amd) {
+      define(function () {
+        return { storeSQL: storeSQL };
+      });
+    } else if (typeof exports !== 'undefined') {
+      module.exports = storeSQL;
+    } else {
+      window.storeSQL = storeSQL;
+    }
 
 }(window);
