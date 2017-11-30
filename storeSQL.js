@@ -6,14 +6,14 @@
       return JSON.stringify(data);
     },
 
-    unserialize: (data) => {
+    parse: (data) => {
       if (data == null) return undefined;
       return JSON.parse(data);
     },
 
     gettype: (value) => {
       return Object.prototype.toString.call(value)
-      }
+    }
 
 	};
 
@@ -27,7 +27,7 @@
     };
 
     const getItem = key => {
-      return utils.unserialize(
+      return utils.parse(
         this.store.getItem(
           setPrefix(key),
         )
@@ -45,6 +45,13 @@
       return !!getItem(key)
     };
 
+    const setDataToType = (data, value, ...fn) => {
+      return utils.gettype(data) == '[object Array]'
+      ? fn[0](data,value)
+      : utils.gettype(data) == '[object Object]'
+      ? fn[1](data,value)
+      : data
+    }
     // end methods private
 
 
@@ -62,15 +69,11 @@
     this.insert = (key, data) => {
 
       let _data = getItem(key)
-      let value = null;
 
-      if (utils.gettype(_data) == '[object Array]') {
-        value = _data.concat(data);
-      }
-
-      if (utils.gettype(_data) == '[object Object]') {
-        value = Object.assign(_data, data)
-      }
+      const value = setDataToType(_data, data,
+        () => _data.concat(data),
+        () => Object.assign(_data,data)
+      );
 
       if (exists(key)) {
           setItem(
@@ -87,11 +90,10 @@
 
       if(data.length){
 
-        if(utils.gettype(result) == '[object Array]'){
-          result = selectResult(result,data);
-        }else if(utils.gettype(result) == '[object Object]'){
-          result = createObject(result,data);
-        }
+        result = setDataToType(result, data,
+          () => selectResult(result,data),
+          () => createObject(result,data)
+        );
       }
 
       return result;
