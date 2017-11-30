@@ -41,9 +41,18 @@
       );
     };
 
+    const removeItem = key => {
+      return this.store.removeItem(key);
+    }
+
     const exists = key => {
       return !!getItem(key)
     };
+
+    const deleteArray = data => {
+      return data.map(indice => setPrefix(indice))
+      .forEach(item => removeItem(item))
+    }
 
     const setDataToType = (data, value, ...fn) => {
       return utils.gettype(data) == '[object Array]'
@@ -53,7 +62,6 @@
       : data
     }
     // end methods private
-
 
     this.create = (key, data) => {
 
@@ -69,10 +77,10 @@
     this.insert = (key, data) => {
 
       let _data = getItem(key)
-
-      const value = setDataToType(_data, data,
-        () => _data.concat(data),
-        () => Object.assign(_data,data)
+      const value = setDataToType(
+        _data, data,
+        _ => _data.concat(data),
+        _ => Object.assign(_data, data)
       );
 
       if (exists(key)) {
@@ -90,9 +98,10 @@
 
       if(data.length){
 
-        result = setDataToType(result, data,
-          () => selectResult(result,data),
-          () => createObject(result,data)
+        result = setDataToType(
+          result, data,
+          _ => selectResult(result,data),
+          _ => createObject(result,data)
         );
       }
 
@@ -126,24 +135,16 @@
     this.where = (key, data) => {}
 
     this.remove = (key) => {
-      let self_key = null;
 
       if (utils.gettype(key) == '[object Array]') {
-        key.map(indice => setPrefix(indice))
-          .forEach(_key => this.store.removeItem(_key))
-      } else {
-        self_key = setPrefix(key);
+          deleteArray(key)
       }
 
-      this.store.removeItem(self_key);
+      removeItem(setPrefix(key));
     }
 
     this.clearAll = _ => {
-
-      this.list()
-        .map(indice => setPrefix(indice))
-        .forEach(key => this.store.removeItem(key))
-
+      deleteArray(this.list())
     }
 
     this.list = _ => {
