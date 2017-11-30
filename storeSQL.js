@@ -1,6 +1,6 @@
 !function (window, undefined) {
 
-  let utils = {
+  const utils = {
 
   serialize: (data) => {
     return JSON.stringify(data);
@@ -15,33 +15,44 @@
     return Object.prototype.toString.call(value)
     }
 
-  };
+	};
+	
+	const Private = (prefix,store) =>{
+		const self = {
+			setItem: (key,data) =>{
+				return store.setItem(
+					self.setPrefix(key),
+					utils.serialize(data),
+				);
+			},
+
+			getItem: key => {
+				return store.getItem(
+					self.setPrefix(key),
+				)
+			},
+
+			setPrefix: (key) =>{
+				return `${prefix}${key}`
+			},
+
+			exists: key => {
+				return !!self.getItem(key);
+			}
+		}
+
+		return self;
+	};
 
   const storeSQL = function (prefix, store) {
     this.prefix = prefix;
-    this.store = store;
-
-    this.setPrefix = (key) => {
-      return `${this.prefix}${key}`
-    }
-
-    this._getItem = key => {
-      return this.store.getItem(
-        this.setPrefix(key),
-      )
-    }
-
-    this._setItem = (key, data) => {
-      return this.store.setItem(
-        this.setPrefix(key),
-        utils.serialize(data),
-      );
-    }
+		this.store = store;
+		const $ = Private(prefix,store);
 
     this.create = (key, data) => {
 
-      if (!exists(this.store, key)) {
-        this._setItem(
+      if (!$.exists(key)) {
+        $.setItem(
           key,
           data,
         )
@@ -51,7 +62,7 @@
 
     this.insert = (key, data) => {
 
-      let _data = utils.unserialize(this._getItem(key))
+      let _data = utils.unserialize($.getItem(key))
       let value = null;
 
       if (utils.gettype(_data) == '[object Array]') {
@@ -62,8 +73,8 @@
         value = Object.assign(_data, data)
       }
 
-      if (exists(this.store, key)) {
-        this._setItem(
+      if ($.exists(key)) {
+        $.setItem(
           key,
           value,
         )
@@ -73,7 +84,7 @@
 
     this.select = (key,data = '') => {
 
-      let result = utils.unserialize(this._getItem(key));
+      let result = utils.unserialize($.getItem(key));
 
       if(data.length){
 
@@ -91,7 +102,7 @@
 
       let originalKey = key;
 
-      let data = utils.unserialize(this._getItem(key));
+      let data = utils.unserialize($.getItem(key));
 
       const objectUpdate = [];
 
@@ -117,24 +128,24 @@
       let self_key = null;
 
       if (utils.gettype(key) == '[object Array]') {
-        key.map(indice => this.setPrefix(indice))
+        key.map(indice => $.setPrefix(indice))
           .forEach(_key => this.store.removeItem(_key))
       } else {
-        self_key = this.setPrefix(key);
+        self_key = $.setPrefix(key);
       }
 
       this.store.removeItem(self_key);
     }
 
-    this.clearAll = () => {
+    this.clearAll = _ => {
 
       this.list()
-        .map(indice => this.setPrefix(indice))
+        .map(indice => $.setPrefix(indice))
         .forEach(key => this.store.removeItem(key))
 
     }
 
-    this.list = () => {
+    this.list = _ => {
 
       return Object.keys(this.store)
             .filter(key => key.startsWith(this.prefix))
@@ -142,15 +153,11 @@
     }
   }
 
-    const exists = (sql, key) => {
-      return !!sql.getItem(key)
-    }
-
     const selectResult = (result,data) => {
 
-    return result.map(input => {
-        return createObject(input,data);
-    });
+			return result.map(input => {
+					return createObject(input,data);
+			});
     }
 
     const createObject = (input,data) => {
